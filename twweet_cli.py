@@ -36,7 +36,7 @@ def get_all_tweets(screen_name):
 
     #keep grabbing tweets until there are no tweets left to grab
     while len(new_tweets) > 0:
-        print "getting tweets before %s" % (oldest)
+        print "getting tweets before {}".format(oldest)
 
         #all subsiquent requests use the max_id param to prevent duplicates
         new_tweets = api.user_timeline(screen_name = screen_name, count = 200, max_id = oldest)
@@ -47,13 +47,13 @@ def get_all_tweets(screen_name):
         # update the id of the oldest tweet less one
         oldest = alltweets[-1].id - 1
 
-        print "...%s tweets downloaded so far"%(len(alltweets))
+        print "...{} tweets downloaded so far".format(len(alltweets))
 
     # transform the tweepy tweets into a 2D array that will populate the csv
     outtweets = [[tweet.id_str,tweet.created_at,tweet.text.encode("utf-8")]for tweet in alltweets]
 
     # write to csv
-    with open('%s_tweets.csv' % screen_name,'wb') as f:
+    with open('{}_tweets.csv'.format(screen_name),'wb') as f:
         writer = csv.writer(f)
         writer.writerow(["id","created_at","text"])
         writer.writerows(outtweets)
@@ -80,29 +80,32 @@ def get_tweets_of_hashtag(hash_tag):
     all_tweets = []
     new_tweets = []
     print "Please be patient while we download the tweets"
-
     api = get_api(cfg)
+
     new_tweets = tweepy.Cursor(api.search, q=hash_tag).items(200)
+    try:
+      while new_tweets:
+          for tweet in new_tweets:
+              all_tweets.append(tweet.text.encode("utf-8"))
+              #max_id will be id of last tweet when loop completes. shitty wasy of doing things
+              max_id = tweet.id
 
-    while new_tweets:
-        for tweet in new_tweets:
-            all_tweets.append(tweet.text.encode("utf-8"))
-            #max_id will be id of last tweet when loop completes. shitty wasy of doing things
-            max_id = tweet.id
+          print "We have got {} tweets so far".format(len(all_tweets))
+          new_tweets = tweepy.Cursor(api.search, q=hash_tag).items(200)
 
-        print "We have got %s tweets so far" % (len(all_tweets))
-        new_tweets = tweepy.Cursor(api.search, q=hash_tag).items(200)
+          if (len(all_tweets)) >= 1000:
+              break
 
-        if (len(all_tweets)) >= 1000:
-            break
+      with open('{}.csv'.format(hash_tag), 'wb') as f:
+          writer = csv.writer(f)
+          for tweet in all_tweets:
+              if tweet:
+                  writer.writerow([tweet])
 
-    with open('%s.csv'%hash_tag, 'wb') as f:
-        writer = csv.writer(f)
-        for tweet in all_tweets:
-            if tweet:
-                writer.writerow([tweet])
+      print "1000 tweets have been saved to {}.csv".format(hash_tag)
 
-    print "1000 tweets have been saved to %s.csv" % hash_tag
+    except tweepy.error.TweepError:
+      print "Error"
 
 
 def get_trending_topics():
@@ -143,16 +146,20 @@ def main():
 
     option = raw_input('Enter \'twweet\' or \'get\' or \'edit\': ')
     if option == 'twweet':
-        tweet = raw_input('Enter your twweet\n')
+        os.system('clear')
+        tweet = raw_input('Enter your twweet: \n')
 	api.update_status(status=tweet)
         # Yes, tweet is called 'status' rather confusing
     elif option == 'get':
-        option = raw_input('1.Get tweets of a user \n2.Get tweets of particular hashtag \n3.Get trending topics\n:')
+        os.system('clear')
+        option = raw_input('1.Get tweets of a user \n2.Get tweets of particular hashtag \n3.Get trending topics\n')
         if option == '1':
-            get_all_tweets(raw_input('Enter the username whose twweet\'s you want to grab '))
+            get_all_tweets(raw_input('Enter the username whose twweet\'s you want to grab: '))
         elif option == '2':
-            get_tweets_of_hashtag(raw_input('Enter the hashtag : '))
+            os.system('clear')
+            get_tweets_of_hashtag(raw_input('Enter the hashtag: '))
         elif option == '3':
+            os.system('clear')
             get_trending_topics()
     elif option == 'edit':
         editapi()
